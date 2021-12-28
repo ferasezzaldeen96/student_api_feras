@@ -17,6 +17,12 @@ class Student(BaseModel):
     gender: str
     major: str
 
+class SecStudent(BaseModel):
+    id : int
+    name: Optional[str]=None
+    gender: Optional[str]=None
+    major: Optional[str]=None
+
 @app.post("/addstudent/")
 def add_new_student(student:Student):
     ListOfStudent.append(student)
@@ -47,29 +53,28 @@ def delete_student(id:int):
     return {"data":"deleted"}
 
 @app.put("/putstudent")
-def put_student(id:int, name:str, gender:str, major:str):
+def put_student(student:Student):
     for i in range(len(ListOfStudent)):
-            print(ListOfStudent[i].id)
-            if ListOfStudent[i].id == id:
+            if ListOfStudent[i].id == student.id:
                 ListOfStudent.pop(i)
                 break
     ListOfStudent.append({
-    "name": name,
-    "gender": gender,
-    "major": major,
-    "id": id,
+    "name": student.name,
+    "gender": student.gender,
+    "major": student.major,
+    "id": student.id,
     })
-    return {"data":f"{name} profile has been updater"}
+    return {"data":f"{student.name} profile has been updater"}
 
 @app.patch("/patchstudent")
-def patch_student(id:int, name:Optional[str]=None, gender: Optional[str]=None, major:Optional[str]=None):
+def patch_student(student:SecStudent):
     for i in range(len(ListOfStudent)):
-        if ListOfStudent[i].id == id:
-            if name:
-                ListOfStudent[i].name=name
-            if gender:
-                ListOfStudent[i].gender=gender
-            if major:
-                ListOfStudent[i].major=major
+        if ListOfStudent[i].id == student.id:
+            if student.name !=None:
+                ListOfStudent[i].name=student.name
+            if student.gender !=None:
+                ListOfStudent[i].gender=student.gender
+            if student.major != None:
+                ListOfStudent[i].major=student.major
             break
     return{"data":"prfile hase been updated"}
