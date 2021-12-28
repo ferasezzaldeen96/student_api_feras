@@ -31,6 +31,7 @@ Temporary Items
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/
+students/
 *.py[cod]
 *$py.class
 .pytest_cache
