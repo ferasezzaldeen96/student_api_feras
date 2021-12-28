@@ -17,13 +17,10 @@ class Student(BaseModel):
     gender: str
     major: str
 
-
-
 @app.post("/addstudent/")
 def add_new_student(student:Student):
     ListOfStudent.append(student)
     return {"data":f"{student.name} has been added"}
-
 
 @app.get("/getstudents")
 def get_student(gender : Optional[str] = None, major : Optional[str] = None):
@@ -40,7 +37,6 @@ def get_student(gender : Optional[str] = None, major : Optional[str] = None):
 def  get_student_by_id(id:int):
     return [x for x in ListOfStudent if x.id == id]
 
-
 @app.delete("/deletestudent")
 def delete_student(id:int):
     for i in range(len(ListOfStudent)):
@@ -49,7 +45,6 @@ def delete_student(id:int):
             ListOfStudent.pop(i)
             break
     return {"data":"deleted"}
-
 
 @app.put("/putstudent")
 def put_student(id:int, name:str, gender:str, major:str):
