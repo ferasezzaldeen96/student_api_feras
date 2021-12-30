@@ -1,80 +1,129 @@
-from typing import Type
-from fastapi import FastAPI
+from fastapi import FastAPI, status, HTTPException
 from typing import Optional
-from pydantic import BaseModel
-import uuid
+from uuid import uuid4
+from models import PatchStudent, PostStudent, PutStudent, StudentResponse
+from session import JSONResponse
 
-id = uuid.uuid1().int
 
 app= FastAPI()
 
 
-ListOfStudent = []
+ListOfStudent = [
+    StudentResponse(
+        id=1,
+        name= "feras",
+        major= "software developer",
+        gender= "male"
+    ),
+    StudentResponse(
+        id=2,
+        name= "sara",
+        major= "manager",
+        gender= "female"
+    )
+]
 
-class Student(BaseModel):
-    id = id
-    name: str
-    gender: str
-    major: str
 
-class SecStudent(BaseModel):
-    id : int
-    name: Optional[str]=None
-    gender: Optional[str]=None
-    major: Optional[str]=None
-
-@app.post("/addstudent/")
-def add_new_student(student:Student):
-    ListOfStudent.append(student)
-    return {"data":f"{student.name} has been added"}
-
-@app.get("/getstudents")
-def get_student(gender : Optional[str] = None, major : Optional[str] = None):
-    if gender == None and major == None :
-        return ListOfStudent
-    if gender and major == None:
-        return [x for x in ListOfStudent if x.gender == gender]
-    if major and gender == None:
-        return [x for x in ListOfStudent if x.major == major]
+@app.get("/students")
+def get_student(gender : Optional[str] = None, major : Optional[str] = None) -> JSONResponse:
+    target = []
+    if not gender and not major :
+        target= ListOfStudent
+    if gender and not major:
+        target= [x for x in ListOfStudent if x.gender == gender]
+    if major and not gender:
+        target= [x for x in ListOfStudent if x.major == major]
     if major and gender :
-        return [x for x in ListOfStudent if x.major == major and x.gender == gender]
+        target= [x for x in ListOfStudent if x.major == major and x.gender == gender]
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={
+            "data":target
+        }
+    )
+
+@app.post("/addstudent")
+def add_new_student(student: PostStudent) ->  JSONResponse:
+    try :
+        new_student = PostStudent(id=uuid4().int, **student.dict(exclude_none=True))
+        ListOfStudent.append(new_student)
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "data":new_student
+            }
+    )
+    except Exception as e:
+        return {f"error{e}"}
+
+
+
 
 @app.get("/getstudentbyid/{id}")
-def  get_student_by_id(id:int):
-    return [x for x in ListOfStudent if x.id == id]
+def  get_student_by_id(id:int) -> JSONResponse:
+    target= [x for x in ListOfStudent if x.id == id]
+    if target !=[]:
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "data":target
+            }
+        )
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail=f'Student with id: {id} is not found'
+    )
 
 @app.delete("/deletestudent")
-def delete_student(id:int):
+def delete_student(id:int) -> JSONResponse:
     for i in range(len(ListOfStudent)):
         print(ListOfStudent[i].id)
         if ListOfStudent[i].id == id:
             ListOfStudent.pop(i)
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "data":"student was deleted"
+                }
+            )
+    raise HTTPException(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        detail='enternal error'
+    )
+
+@app.put("/putstudent/{id}")
+def put_student(student:PutStudent, id) -> JSONResponse:
+    for i in range(len(ListOfStudent)):
+        if ListOfStudent[i].id == int(id):
+            ListOfStudent.pop(i)
             break
-    return {"data":"deleted"}
+    new_student = PutStudent(id=id, name=student.name, major=student.major, gender=student.gender )
+    ListOfStudent.append(new_student)
+    return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={
+                "data":new_student
+            }
+        )
 
-@app.put("/putstudent")
-def put_student(student:Student):
-    for i in range(len(ListOfStudent)):
-            if ListOfStudent[i].id == student.id:
-                ListOfStudent.pop(i)
-                break
-    ListOfStudent.append({
-    "name": student.name,
-    "gender": student.gender,
-    "major": student.major,
-    "id": student.id,
-    })
-    return {"data":f"{student.name} profile has been updater"}
 
-@app.patch("/patchstudent")
-def patch_student(student:SecStudent):
+@app.patch("/patchstudent/{id}")
+def patch_student(student:PatchStudent, id) -> JSONResponse:
     for i in range(len(ListOfStudent)):
-        if ListOfStudent[i].id == student.id:
+        if ListOfStudent[i].id ==int(id):
             if student.name !=None:
                 ListOfStudent[i].name=student.name
             if student.gender !=None:
                 ListOfStudent[i].gender=student.gender
             if student.major != None:
                 ListOfStudent[i].major=student.major
-            break
-    return{"data":"prfile hase been updated"}
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={
+                    "data":ListOfStudent[i]
+                }
+            )
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Student not found"
+    )
