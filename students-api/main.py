@@ -1,129 +1,132 @@
+import uuid
+
+from sqlalchemy.sql.expression import select
 from fastapi import FastAPI, status, HTTPException
 from typing import Optional
 from uuid import uuid4
-from models import PatchStudent, PostStudent, PutStudent, StudentResponse
+from uuid import UUID
+from models import PatchStudent, PostStudent, PutStudent, StudentResponse, TestDB, PostDB, PatchDB, PutDB
 from session import JSONResponse
+from db import engine
+from db import students as student_table
+from datetime import datetime
 
 
 app= FastAPI()
 
 
-ListOfStudent = [
-    StudentResponse(
-        id=1,
-        name= "feras",
-        major= "software developer",
-        gender= "male"
-    ),
-    StudentResponse(
-        id=2,
-        name= "sara",
-        major= "manager",
-        gender= "female"
+
+@app.get("/getstudentbyid/{id}")
+def  get_student_by_id(id:UUID) -> JSONResponse:
+    with engine.connect() as conn:
+        student = conn.execute(student_table.select().where(
+            student_table.c.id == id)).first()
+    
+    if not student:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f'Student with id: {id} dose not exist'
+        )
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={'data': TestDB(**student._asdict())}
     )
-]
+
+
+@app.post("/addstudent")
+def add_new_student(student: PostDB) ->  JSONResponse:
+    with engine.begin() as conn:
+        new_student = conn.execute(student_table.insert().returning(student_table).values(**student.dict(exclude_none=True)))
+        if not new_student:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail='AN ERROR CAME UP '
+            )
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content={'data': new_student.first()}
+        )
 
 
 @app.get("/students")
-def get_student(gender : Optional[str] = None, major : Optional[str] = None) -> JSONResponse:
-    target = []
-    if not gender and not major :
-        target= ListOfStudent
-    if gender and not major:
-        target= [x for x in ListOfStudent if x.gender == gender]
-    if major and not gender:
-        target= [x for x in ListOfStudent if x.major == major]
-    if major and gender :
-        target= [x for x in ListOfStudent if x.major == major and x.gender == gender]
-    return JSONResponse(
-        status_code=status.HTTP_200_OK,
-        content={
-            "data":target
-        }
-    )
-
-@app.post("/addstudent")
-def add_new_student(student: PostStudent) ->  JSONResponse:
-    try :
-        new_student = PostStudent(id=uuid4().int, **student.dict(exclude_none=True))
-        ListOfStudent.append(new_student)
+def get_student(gender : Optional[str] = None, department : Optional[str] = None) -> JSONResponse:
+    if not gender and not department:
+        with engine.connect() as conn:
+            students = conn.execute(select(student_table)).fetchall()
         return JSONResponse(
             status_code=status.HTTP_200_OK,
-            content={
-                "data":new_student
-            }
-    )
-    except Exception as e:
-        return {f"error{e}"}
-
-
-
-
-@app.get("/getstudentbyid/{id}")
-def  get_student_by_id(id:int) -> JSONResponse:
-    target= [x for x in ListOfStudent if x.id == id]
-    if target !=[]:
-        return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data":target
-            }
+            content=(TestDB(**student._asdict()) for student in students)
         )
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail=f'Student with id: {id} is not found'
-    )
+    if  gender and not department:
+        with engine.connect() as conn:
+            students = conn.execute(student_table.select().where(student_table.c.gender==gender)).fetchall()
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=(TestDB(**student._asdict()) for student in students)
+        )
+    if  not gender and department:
+        with engine.connect() as conn:
+            students = conn.execute(student_table.select().where(student_table.c.department==department)).fetchall()
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=(TestDB(**student._asdict()) for student in students)
+        )
+    if  gender and department:
+        with engine.connect() as conn:
+            students = conn.execute(student_table.select().where(student_table.c.department==department, student_table.c.gender==gender)).fetchall()
+        return JSONResponse(
+            status_code=status.HTTP_200_OK,
+            content=(TestDB(**student._asdict()) for student in students)
+        )
+
+
+
+
 
 @app.delete("/deletestudent")
-def delete_student(id:int) -> JSONResponse:
-    for i in range(len(ListOfStudent)):
-        print(ListOfStudent[i].id)
-        if ListOfStudent[i].id == id:
-            ListOfStudent.pop(i)
+def delete_student(id:UUID) -> JSONResponse:
+    with engine.begin() as conn:
+        delete_student = conn.execute(student_table.delete().returning(student_table).where(student_table.c.id == id))
+        deleted=delete_student.first()
+        if  not deleted:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Student with id: {id} dose not exist'
+            )
+        else:
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
-                content={
-                    "data":"student was deleted"
-                }
+                content={'data': deleted}
             )
-    raise HTTPException(
-        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        detail='enternal error'
-    )
+
 
 @app.put("/putstudent/{id}")
-def put_student(student:PutStudent, id) -> JSONResponse:
-    for i in range(len(ListOfStudent)):
-        if ListOfStudent[i].id == int(id):
-            ListOfStudent.pop(i)
-            break
-    new_student = PutStudent(id=id, name=student.name, major=student.major, gender=student.gender )
-    ListOfStudent.append(new_student)
-    return JSONResponse(
-            status_code=status.HTTP_200_OK,
-            content={
-                "data":new_student
-            }
+def put_student(student:PutDB, id) -> JSONResponse:
+    try :
+        with engine.begin() as conn:
+            updated_student = conn.execute(student_table.update().returning(student_table).where(student_table.c.id == id).values(**student.dict(exclude_none=True),updated_at= datetime.now()))
+            return JSONResponse(
+                status_code=status.HTTP_200_OK,
+                content={'data': updated_student.first()}
+            )   
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='AN ERROR CAME UP '
         )
 
 
 @app.patch("/patchstudent/{id}")
-def patch_student(student:PatchStudent, id) -> JSONResponse:
-    for i in range(len(ListOfStudent)):
-        if ListOfStudent[i].id ==int(id):
-            if student.name !=None:
-                ListOfStudent[i].name=student.name
-            if student.gender !=None:
-                ListOfStudent[i].gender=student.gender
-            if student.major != None:
-                ListOfStudent[i].major=student.major
+def patch_student(student:PatchDB, id) -> JSONResponse:
+    try :
+        with engine.begin() as conn:
+            updated_student = conn.execute(student_table.update().returning(student_table).where(student_table.c.id == id).values(**student.dict(exclude_none=True),updated_at= datetime.now()))
             return JSONResponse(
                 status_code=status.HTTP_200_OK,
-                content={
-                    "data":ListOfStudent[i]
-                }
-            )
-    raise HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Student not found"
-    )
+                content={'data': updated_student.first()}
+            )        
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail='AN ERROR CAME UP '
+        )
