@@ -3,7 +3,6 @@ from os import environ
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.sql.schema import Column
 
 connect_str =\
     'postgresql://{PGUSER}:{PGPASSWORD}@{PGHOST}:{PGPORT}/{PGDATABASE}'\
