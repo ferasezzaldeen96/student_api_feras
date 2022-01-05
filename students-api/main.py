@@ -5,7 +5,7 @@ from fastapi import FastAPI, status, HTTPException
 from typing import Optional
 from uuid import uuid4
 from uuid import UUID
-from models import PatchStudent, PostStudent, PutStudent, StudentResponse, TestDB, PostDB, PatchDB, PutDB
+from models import  TestDB, PostDB, PatchDB, PutDB
 from session import JSONResponse
 from db import engine
 from db import students as student_table
