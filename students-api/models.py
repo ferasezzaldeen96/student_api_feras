@@ -28,8 +28,8 @@ class PostStudent(BaseModel):
     birth_date: date
 
     @validator("birth_date", pre=True)
-    def check_BD(cls, value: date):
-        if value > str(date.today()):
+    def check_birth_date(cls, value: date):
+        if value > str(datetime.utcnow()):
             raise ValueError('wrong entry')
         else:
             return value
@@ -58,6 +58,8 @@ class PutStudent(BaseModel):
     department: str = Field(
         example="civil engineer, sotware engineer", max_length=40)
     birth_date: date
+    created_at: datetime
+    updated_at: datetime
 
     @validator("birth_date", pre=True)
     def check_BD(cls, value: date):
