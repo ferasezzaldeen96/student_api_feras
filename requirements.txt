@@ -3,6 +3,7 @@ anyio==3.2.1
 argon2-cffi==20.1.0
 async-timeout==3.0.1
 attrs==21.3.0
+alembic==1.7.5
 certifi==2021.10.8
 cffi==1.15.0
 chardet==4.0.0

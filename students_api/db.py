@@ -33,9 +33,3 @@ students = sa.Table(
     sa.Column('updated_at', sa.DateTime, nullable=False,
               onupdate=now, **default_now),
 )
-
-
-with engine.begin() as conn:
-    conn.execute(sa.text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp";'))
-
-metadata.create_all(engine)

@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from enum import Enum
 from typing import Optional
 from uuid import UUID
 
@@ -7,10 +8,15 @@ from pydantic import BaseModel, Field, validator
 today = date.today()
 
 
+class Gender(str, Enum):
+    male = 'male'
+    female = 'female'
+
+
 class BaseStudent(BaseModel):
     id: Optional[UUID]
     name: str = Field(example="first middle last", max_length=50)
-    gender: str = Field(example="male or female", max_length=10)
+    gender: Gender = Field(example="male or female", max_length=10)
     state: str = Field(example="New York, LA, Texas", max_length=20)
     department: str = Field(
         example="civil engineer, sotware engineer", max_length=40)
@@ -21,14 +27,14 @@ class BaseStudent(BaseModel):
 
 class PostStudent(BaseModel):
     name: str = Field(example="first middle last", max_length=50)
-    gender: str = Field(example="male or female", max_length=10)
+    gender: Gender = Field(example="male or female", )
     state: str = Field(example="New York, LA, Texas", max_length=20)
     department: str = Field(
         example="civil engineer, sotware engineer", max_length=40)
     birth_date: date
 
     @validator("birth_date", pre=True)
-    def check_birth_date(cls, value: date):
+    def check_birth_date(cls, value: str):
         if value > str(datetime.utcnow()):
             raise ValueError('wrong entry')
         else:
@@ -37,15 +43,15 @@ class PostStudent(BaseModel):
 
 class PatchStudent(BaseModel):
     name: Optional[str] = Field(example="first middle last", max_length=50)
-    gender: Optional[str] = Field(example="male or female", max_length=10)
+    gender: Optional[Gender] = Field(example="male or female", max_length=10)
     state: Optional[str] = Field(example="New York, LA, Texas", max_length=20)
     department: Optional[str] = Field(
         example="civil engineer, sotware engineer", max_length=40)
     birth_date: Optional[date]
 
     @validator("birth_date", pre=True)
-    def check_BD(cls, value: date):
-        if value > str(date.today()):
+    def check_birth_date(cls, value: str):
+        if value > str(datetime.utcnow()):
             raise ValueError('wrong entry')
         else:
             return value
@@ -53,7 +59,7 @@ class PatchStudent(BaseModel):
 
 class PutStudent(BaseModel):
     name: str = Field(example="first middle last", max_length=50)
-    gender: str = Field(example="male or female", max_length=10)
+    gender: Gender = Field(example="male or female", max_length=10)
     state: str = Field(example="New York, LA, Texas", max_length=20)
     department: str = Field(
         example="civil engineer, sotware engineer", max_length=40)
@@ -62,8 +68,8 @@ class PutStudent(BaseModel):
     updated_at: datetime
 
     @validator("birth_date", pre=True)
-    def check_BD(cls, value: date):
-        if value > str(date.today()):
+    def check_birth_date(cls, value: str):
+        if value > str(datetime.utcnow()):
             raise ValueError('wrong entry')
         else:
             return value

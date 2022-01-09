@@ -23,7 +23,7 @@ services:
     container_name: students-api
     depends_on:
       - students-postgres
-    command: ["uvicorn", "--reload", "--workers", "1", "--host", "0.0.0.0", "--port", "80", "students-api.main:app"]
+    command: ["uvicorn", "--reload", "--workers", "1", "--host", "0.0.0.0", "--port", "80", "students_api.main:app"]
 
 
   students-postgres:
